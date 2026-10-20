@@ -6,7 +6,7 @@
 <div class="paper-deco top-left">✿</div><div class="paper-deco top-right">✿</div>
 <main class="container">
   <header class="hero"><div class="eyebrow">GOBIERNO DEL ESTADO DE AGUASCALIENTES · INSTITUTO DE LA JUVENTUD</div>
-    <div class="flor">✿ <span>✺</span> ✿</div>
+    <div class="flor" aria-hidden="true">✿ <span>✺</span> ✿</div>
     <h1><span>FESTIVAL <i>de</i></span><strong>CALAVERAS</strong><em>RUTA UNIVERSITARIA</em></h1>
     <p>Regístrate y consigue tu boleto personalizado para celebrar nuestras tradiciones.</p></header>
   <section class="layout">
@@ -14,21 +14,27 @@
     <h2>Completa tu registro</h2><p class="intro">Ingresa tus datos tal como deben aparecer en el registro. El nombre se imprimirá en tu boleto.</p>
     <div class="quota" id="quota" aria-live="polite">Te quedan <b>{{ remaining }}</b> de 3 registros en este dispositivo.</div>
     <form id="form" novalidate>
-      <label for="nombre">Nombre completo <small>*</small></label>
-      <input id="nombre" name="nombre" type="text" maxlength="95" autocomplete="name" placeholder="Nombre(s) y apellidos" required>
+      <div class="fields-grid"><div class="field"><label for="nombres">Nombre(s) <small>*</small></label>
+      <input id="nombres" name="nombres" type="text" maxlength="65" autocomplete="given-name" placeholder="Tus nombres" required></div><div class="field">
+      <label for="apellidos">Apellidos <small>*</small></label>
+      <input id="apellidos" name="apellidos" type="text" maxlength="65" autocomplete="family-name" placeholder="Tus apellidos" required></div></div>
       <label for="universidad">Universidad <small>*</small></label>
       <input id="universidad" name="universidad" type="text" maxlength="120" placeholder="Nombre de tu universidad" required>
       <label for="telefono">Número de teléfono <small>*</small></label>
       <input id="telefono" name="telefono" type="tel" inputmode="numeric" maxlength="16" autocomplete="tel-national" placeholder="10 dígitos" required>
-      <label for="direccion">Dirección <small>*</small></label>
-      <textarea id="direccion" name="direccion" rows="2" maxlength="220" autocomplete="street-address" placeholder="Calle, número, colonia y municipio" required></textarea>
+      <div class="fields-grid address-grid"><div class="field"><label for="calle">Calle <small>*</small></label>
+      <input id="calle" name="calle" maxlength="120" autocomplete="address-line1" placeholder="Nombre de la calle" required></div><div class="field">
+      <label for="numero_casa">Número de casa <small>*</small></label>
+      <input id="numero_casa" name="numero_casa" maxlength="20" placeholder="Ej. 123 o S/N" required></div></div>
+      <label for="colonia">Colonia <small>*</small></label>
+      <input id="colonia" name="colonia" maxlength="100" autocomplete="address-level3" placeholder="Nombre de la colonia" required>
       <p class="privacy">Tus datos se usarán para administrar el registro al festival. Evita registrar a otra persona sin su consentimiento.</p>
       <div class="error" id="error" role="alert" hidden></div>
       <button type="submit" id="submit">GENERAR MI BOLETO <span>➜</span></button>
     </form>
-    <div class="success" id="success" hidden><div class="check">✓</div><h2>¡Registro exitoso!</h2><p id="success-name"></p><a id="download" class="download" href="#" download>⬇ Descargar mi boleto (PNG)</a><p class="small">Guarda tu imagen y preséntala al ingresar al festival.</p><button id="another" class="secondary">Registrar a otra persona</button></div>
+    <div class="success" id="success" hidden><div class="check">✓</div><h2>¡Registro exitoso!</h2><p id="success-name"></p><img id="ticket-result" alt="Tu boleto personalizado vertical" class="ticket-result" hidden><a id="download" class="download" href="#" target="_blank" rel="noopener">Abrir imagen del boleto</a><p class="small">En iPhone, mantén presionada la imagen y selecciona «Guardar en Fotos», o toma una captura de pantalla.</p><button id="another" class="secondary">Registrar a otra persona</button></div>
    </div>
-   <aside class="preview"><div class="preview-title">ASÍ SE VERÁ TU BOLETO</div><img src="/static/boleto_original.png" alt="Vista previa del boleto Festival de Calaveras"/><p>Un recuerdo de nuestras tradiciones <span>✦</span> ¡Nos vemos en el festival!</p></aside>
+   <aside class="preview"><div class="preview-title">✦ TU BOLETO DIGITAL ✦</div><div class="preview-frame"><img src="/static/boleto_vertical.png" alt="Vista previa vertical del boleto Festival de Calaveras"/></div><p>Una entrada llena de tradición <span>✦</span> ¡Nos vemos en el festival!</p><div class="feature-note">✿ Personalizado con tu nombre · Listo para guardar en Fotos</div></aside>
   </section>
   <footer>✿ Festival de Calaveras · Ruta Universitaria ✿</footer>
 </main><script src="/static/main.js"></script></body></html>

@@ -9,7 +9,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 BASE = Path(__file__).resolve().parent
 DB = BASE / 'data' / 'registros.json'
-TICKET = BASE / 'assets' / 'boleto_original.png'
+TICKET = BASE / 'assets' / 'boleto_vertical.png'
 FONT = BASE / 'assets' / 'font.ttf'
 DB.parent.mkdir(exist_ok=True)
 if not DB.exists(): DB.write_text('[]', encoding='utf-8')
@@ -115,18 +115,23 @@ def registrar():
     if not request.is_json:
         return jsonify(error='Envía los datos en formato JSON.'), 415
     data = request.get_json(silent=True) or {}
-    nombre = ' '.join(str(data.get('nombre', '')).strip().split())
+    nombres = ' '.join(str(data.get('nombres', '')).strip().split())
+    apellidos = ' '.join(str(data.get('apellidos', '')).strip().split())
+    nombre = f'{nombres} {apellidos}'
     universidad = ' '.join(str(data.get('universidad', '')).strip().split())
-    direccion = ' '.join(str(data.get('direccion', '')).strip().split())
+    calle = ' '.join(str(data.get('calle', '')).strip().split())
+    numero_casa = ' '.join(str(data.get('numero_casa', '')).strip().split())
+    colonia = ' '.join(str(data.get('colonia', '')).strip().split())
+    direccion = f'{calle} #{numero_casa}, Col. {colonia}'
     telefono = re.sub(r'\D', '', str(data.get('telefono', '')))
-    if not valid_name(nombre):
-        return jsonify(error='Escribe tu nombre completo, mínimo nombre y apellido (solo letras).'), 400
+    if not (2 <= len(nombres) <= 65 and 2 <= len(apellidos) <= 65 and valid_name(nombre)):
+        return jsonify(error='Ingresa nombres y apellidos válidos.'), 400
     if not (3 <= len(universidad) <= 120):
-        return jsonify(error='Escribe el nombre completo de tu universidad.'), 400
+        return jsonify(error='Escribe el nombre de tu universidad.'), 400
     if len(telefono) != 10:
         return jsonify(error='El teléfono debe tener exactamente 10 dígitos.'), 400
-    if not (8 <= len(direccion) <= 220):
-        return jsonify(error='Escribe una dirección completa (calle, número y colonia).'), 400
+    if not (3 <= len(calle) <= 120 and 1 <= len(numero_casa) <= 20 and 2 <= len(colonia) <= 100):
+        return jsonify(error='Completa calle, número de casa y colonia.'), 400
     device, _ = device_id()
     normalized = normalize_name(nombre)
     tokens = normalized.split()
@@ -145,7 +150,7 @@ def registrar():
                 return jsonify(error='Ya existe un registro con el mismo primer nombre y último apellido. Contacta al organizador si es otra persona.'), 409
         rid = uuid.uuid4().hex
         rows.append({'id': rid, 'nombre': nombre, 'nombre_normalizado': normalized,
-                     'universidad': universidad, 'telefono': telefono, 'direccion': direccion,
+                     'nombres': nombres, 'apellidos': apellidos, 'universidad': universidad, 'telefono': telefono, 'calle': calle, 'numero_casa': numero_casa, 'colonia': colonia, 'direccion': direccion,
                      'device_id': device, 'fecha_utc': datetime.now(timezone.utc).isoformat()})
         save_db(rows)
         restantes = 3 - sum(x['device_id'] == device for x in rows)
@@ -154,23 +159,23 @@ def registrar():
 
 
 def make_ticket(nombre):
-    image = Image.open(TICKET).convert('RGB')
-    draw = ImageDraw.Draw(image)
-    # Name-writing area: x=430..1133, baseline ~750, on 1659x948 ticket.
-    text = nombre.upper()
-    max_width = 685
-    size = 36
-    while size >= 17:
+    """Escribe el nombre directamente sobre la plantilla vertical exacta."""
+    art = Image.open(TICKET).convert('RGB')
+    scale = 3
+    canvas = art.resize((art.width * scale, art.height * scale), Image.Resampling.LANCZOS)
+    draw = ImageDraw.Draw(canvas)
+    # El recuadro NOMBRE de la plantilla 381x686 empieza cerca de x=134, y=476.
+    left, right = 134 * scale, 342 * scale
+    center_y = 475 * scale
+    name = ' '.join(nombre.split()).upper()
+    for size in range(12 * scale, 6 * scale - 1, -1):
         font = ImageFont.truetype(str(FONT), size)
-        if draw.textbbox((0, 0), text, font=font)[2] <= max_width: break
-        size -= 1
-    if draw.textbbox((0, 0), text, font=font)[2] > max_width:
-        raise ValueError('El nombre es demasiado largo para el boleto')
-    bbox = draw.textbbox((0, 0), text, font=font)
-    text_h = bbox[3] - bbox[1]
-    draw.text((435, 748 - text_h/2 - bbox[1]), text, font=font, fill='#792568')
+        bounds = draw.textbbox((0, 0), name, font=font)
+        if bounds[2] - bounds[0] <= right - left - 8 * scale:
+            break
+    draw.text((left, center_y), name, font=font, anchor='lm', fill='#7c1e75', stroke_width=0)
     buff = BytesIO()
-    image.save(buff, format='PNG', optimize=True)
+    canvas.save(buff, format='PNG', optimize=True)
     buff.seek(0)
     return buff
 
@@ -182,7 +187,7 @@ def boleto(rid):
     with DatabaseLock():
         row = next((x for x in load_db() if x['id'] == rid and x['device_id'] == device), None)
     if row is None: return jsonify(error='Boleto no encontrado para este dispositivo.'), 404
-    return send_file(make_ticket(row['nombre']), mimetype='image/png', as_attachment=True,
+    return send_file(make_ticket(row['nombre']), mimetype='image/png', as_attachment=False,
                      download_name=f'boleto_festival_{rid[:8]}.png')
 
 
