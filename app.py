@@ -1,16 +1,14 @@
 import os, re, json, uuid, hmac, hashlib, tempfile, threading, unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
-from io import BytesIO
-from flask import Flask, request, jsonify, render_template, send_file, make_response
-from PIL import Image, ImageDraw, ImageFont
+from flask import Flask, request, jsonify, render_template, make_response
 from itsdangerous import URLSafeSerializer, BadSignature
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 BASE = Path(__file__).resolve().parent
 DB = BASE / 'data' / 'registros.json'
-TICKET = BASE / 'assets' / 'boleto_vertical.png'
-FONT = BASE / 'assets' / 'font.ttf'
+# Cambia este valor una sola vez: se guardará igual para TODOS los registros nuevos.
+UNIVERSIDAD_FIJA = 'UTNA'
 DB.parent.mkdir(exist_ok=True)
 if not DB.exists(): DB.write_text('[]', encoding='utf-8')
 app = Flask(__name__)
@@ -118,7 +116,7 @@ def registrar():
     nombres = ' '.join(str(data.get('nombres', '')).strip().split())
     apellidos = ' '.join(str(data.get('apellidos', '')).strip().split())
     nombre = f'{nombres} {apellidos}'
-    universidad = ' '.join(str(data.get('universidad', '')).strip().split())
+    universidad = UNIVERSIDAD_FIJA
     calle = ' '.join(str(data.get('calle', '')).strip().split())
     numero_casa = ' '.join(str(data.get('numero_casa', '')).strip().split())
     colonia = ' '.join(str(data.get('colonia', '')).strip().split())
@@ -126,8 +124,6 @@ def registrar():
     telefono = re.sub(r'\D', '', str(data.get('telefono', '')))
     if not (2 <= len(nombres) <= 65 and 2 <= len(apellidos) <= 65 and valid_name(nombre)):
         return jsonify(error='Ingresa nombres y apellidos válidos.'), 400
-    if not (3 <= len(universidad) <= 120):
-        return jsonify(error='Escribe el nombre de tu universidad.'), 400
     if len(telefono) != 10:
         return jsonify(error='El teléfono debe tener exactamente 10 dígitos.'), 400
     if not (3 <= len(calle) <= 120 and 1 <= len(numero_casa) <= 20 and 2 <= len(colonia) <= 100):
@@ -154,41 +150,8 @@ def registrar():
                      'device_id': device, 'fecha_utc': datetime.now(timezone.utc).isoformat()})
         save_db(rows)
         restantes = 3 - sum(x['device_id'] == device for x in rows)
-    return set_device_cookie(jsonify(ok=True, id=rid, nombre=nombre, restantes=restantes,
-                                     boleto_url=f'/boleto/{rid}.png'), device), 201
+    return set_device_cookie(jsonify(ok=True, nombre=nombre, restantes=restantes), device), 201
 
-
-def make_ticket(nombre):
-    """Escribe el nombre directamente sobre la plantilla vertical exacta."""
-    art = Image.open(TICKET).convert('RGB')
-    scale = 3
-    canvas = art.resize((art.width * scale, art.height * scale), Image.Resampling.LANCZOS)
-    draw = ImageDraw.Draw(canvas)
-    # El recuadro NOMBRE de la plantilla 381x686 empieza cerca de x=134, y=476.
-    left, right = 134 * scale, 342 * scale
-    center_y = 475 * scale
-    name = ' '.join(nombre.split()).upper()
-    for size in range(12 * scale, 6 * scale - 1, -1):
-        font = ImageFont.truetype(str(FONT), size)
-        bounds = draw.textbbox((0, 0), name, font=font)
-        if bounds[2] - bounds[0] <= right - left - 8 * scale:
-            break
-    draw.text((left, center_y), name, font=font, anchor='lm', fill='#7c1e75', stroke_width=0)
-    buff = BytesIO()
-    canvas.save(buff, format='PNG', optimize=True)
-    buff.seek(0)
-    return buff
-
-
-@app.get('/boleto/<rid>.png')
-def boleto(rid):
-    if not re.fullmatch(r'[0-9a-f]{32}', rid): return jsonify(error='Boleto no encontrado.'), 404
-    device, _ = device_id()
-    with DatabaseLock():
-        row = next((x for x in load_db() if x['id'] == rid and x['device_id'] == device), None)
-    if row is None: return jsonify(error='Boleto no encontrado para este dispositivo.'), 404
-    return send_file(make_ticket(row['nombre']), mimetype='image/png', as_attachment=False,
-                     download_name=f'boleto_festival_{rid[:8]}.png')
 
 
 if __name__ == '__main__':

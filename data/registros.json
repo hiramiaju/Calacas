@@ -1,1 +1,17 @@
-[]
+[
+  {
+    "id": "fcfe2a5f58674ffe910712a44c96d30d",
+    "nombre": "hiram montañez",
+    "nombre_normalizado": "hiram montanez",
+    "nombres": "hiram",
+    "apellidos": "montañez",
+    "universidad": "UNIVERSIDAD_POR_CONFIGURAR",
+    "telefono": "4492779268",
+    "calle": "asdfasdd",
+    "numero_casa": "123",
+    "colonia": "asddfasddfasfdda",
+    "direccion": "asdfasdd #123, Col. asddfasddfasfdda",
+    "device_id": "2fbf7a185b0a4e40a81b458cf1d94272",
+    "fecha_utc": "2026-10-21T05:50:31.998336+00:00"
+  }
+]
